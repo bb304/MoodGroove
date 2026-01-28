@@ -1,0 +1,14 @@
+{
+  "name": "moodgroove-backend",
+  "version": "1.0.0",
+  "description": "Backend API server for MoodGroove",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
+
