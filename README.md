@@ -66,4 +66,3 @@ npm install
 - **Artist Recommendations**: Get personalized artist recommendations based on your Spotify listening habits
 - **Spotify Integration**: Connect your Spotify account to access your top artists and discover new music
 - **Learning System**: Like/dislike songs to improve recommendations
-
