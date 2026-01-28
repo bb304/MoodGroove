@@ -5,6 +5,7 @@ import Home from './Home';
 import ArtistRecommender from './ArtistRecommender';
 import Rolodex from './Rolodex';
 import WhatsMyOrder from './WhatsMyOrder';
+import { getSpotifyRedirectUri } from './utils/spotifyAuth';
 
 // Component to handle Spotify OAuth callback at root level
 const SpotifyCallback = () => {
@@ -388,11 +389,7 @@ function App() {
     setError(null);
     
     try {
-      let redirectUri = sessionStorage.getItem('spotify_redirect_uri') || window.location.origin;
-      
-      if (redirectUri.includes('localhost')) {
-        redirectUri = redirectUri.replace('localhost', '127.0.0.1');
-      }
+      let redirectUri = sessionStorage.getItem('spotify_redirect_uri') || getSpotifyRedirectUri();
 
       const response = await fetch('https://accounts.spotify.com/api/token', {
         method: 'POST',
@@ -489,11 +486,7 @@ function App() {
       const currentPath = window.location.pathname;
       sessionStorage.setItem('spotify_intended_route', currentPath);
       
-      let redirectUri = window.location.origin;
-      if (redirectUri.includes('localhost')) {
-        redirectUri = redirectUri.replace('localhost', '127.0.0.1');
-      }
-
+      const redirectUri = getSpotifyRedirectUri();
       sessionStorage.setItem('spotify_redirect_uri', redirectUri);
 
       const { codeVerifier, codeChallenge } = await generatePKCE();

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getSpotifyRedirectUri } from './utils/spotifyAuth';
 
 const SPOTIFY_CLIENT_ID = process.env.REACT_APP_SPOTIFY_CLIENT_ID || '3c2e02bde2364852bb36f1d913e4d115';
 
@@ -37,13 +38,7 @@ const ArtistRecommender = () => {
     setIsLoading(true);
     setError(null);
     try {
-      // Get the redirect URI that was used in the authorization request (stored in sessionStorage)
-      let redirectUri = sessionStorage.getItem('spotify_redirect_uri') || window.location.origin;
-      
-      // Ensure it uses 127.0.0.1 instead of localhost
-      if (redirectUri.includes('localhost')) {
-        redirectUri = redirectUri.replace('localhost', '127.0.0.1');
-      }
+      const redirectUri = sessionStorage.getItem('spotify_redirect_uri') || getSpotifyRedirectUri();
 
       console.log('Exchanging code for token...', { 
         code: code.substring(0, 10) + '...', 
@@ -206,12 +201,7 @@ const ArtistRecommender = () => {
       const currentPath = window.location.pathname;
       sessionStorage.setItem('spotify_intended_route', currentPath);
       
-      let redirectUri = window.location.origin;
-      if (redirectUri.includes('localhost')) {
-        redirectUri = redirectUri.replace('localhost', '127.0.0.1');
-      }
-
-      // Store the redirect URI so we can use the exact same one in token exchange
+      const redirectUri = getSpotifyRedirectUri();
       sessionStorage.setItem('spotify_redirect_uri', redirectUri);
 
       const { codeVerifier, codeChallenge } = await generatePKCE();

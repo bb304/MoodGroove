@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getSpotifyRedirectUri } from './utils/spotifyAuth';
 
 const SPOTIFY_CLIENT_ID = process.env.REACT_APP_SPOTIFY_CLIENT_ID || '3c2e02bde2364852bb36f1d913e4d115';
 
@@ -35,11 +36,7 @@ const Rolodex = () => {
     setIsLoading(true);
     setError(null);
     try {
-      let redirectUri = sessionStorage.getItem('spotify_redirect_uri') || window.location.origin;
-      
-      if (redirectUri.includes('localhost')) {
-        redirectUri = redirectUri.replace('localhost', '127.0.0.1');
-      }
+      const redirectUri = sessionStorage.getItem('spotify_redirect_uri') || getSpotifyRedirectUri();
 
       const response = await fetch('https://accounts.spotify.com/api/token', {
         method: 'POST',
@@ -236,11 +233,7 @@ const Rolodex = () => {
       const currentPath = window.location.pathname;
       sessionStorage.setItem('spotify_intended_route', currentPath);
       
-      let redirectUri = window.location.origin;
-      if (redirectUri.includes('localhost')) {
-        redirectUri = redirectUri.replace('localhost', '127.0.0.1');
-      }
-
+      const redirectUri = getSpotifyRedirectUri();
       sessionStorage.setItem('spotify_redirect_uri', redirectUri);
 
       const { codeVerifier, codeChallenge } = await generatePKCE();
