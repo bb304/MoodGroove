@@ -1128,12 +1128,6 @@ function App() {
             <button onClick={redirectToSpotifyLogin} className="mood-button">
               Login with Spotify
             </button>
-            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px', marginTop: '16px', wordBreak: 'break-all' }}>
-              Redirect URI: {getSpotifyRedirectUri() || '(none)'}
-            </p>
-            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '11px', marginTop: '4px' }}>
-              Add this exact URL in Spotify Dashboard → Your App → Settings → Redirect URIs
-            </p>
           </div>
         ) : (
         <>
