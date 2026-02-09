@@ -4,13 +4,13 @@
  */
 export function getSpotifyRedirectUri() {
   if (typeof window !== 'undefined') {
-    let origin = window.location.origin || '';
-    
-    if (origin.includes('localhost')) {
+    const hostname = window.location.hostname;
+
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
       return 'http://localhost:3000';
     }
-    
-    return origin.replace(/\/$/, '');
+
+    return 'https://moodgroove.vercel.app';
   }
   return 'http://localhost:3000';
 }
