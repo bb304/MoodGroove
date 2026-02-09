@@ -62,9 +62,11 @@ const VIBE_PROFILES = {
     maxTempo: 100
   },
   'Calm': {
-    minValence: 0.6,
-    maxEnergy: 0.4,
-    minAcousticness: 0.7
+    minValence: 0.5,
+    maxEnergy: 0.25,
+    maxTempo: 95,
+    maxDanceability: 0.55,
+    minAcousticness: 0.5
   },
   'Energetic': {
     minEnergy: 0.7,
@@ -74,6 +76,15 @@ const VIBE_PROFILES = {
     minInstrumentalness: 0.7,
     maxEnergy: 0.5
   }
+};
+
+// Baseline target profiles used when applying thumbs-down training (no learned profile yet)
+const BASELINE_TARGET_PROFILES = {
+  'Happy':   { target_valence: 0.75, target_energy: 0.6, target_acousticness: 0.5, target_danceability: 0.6, target_instrumentalness: 0.2, target_tempo: 115 },
+  'Sad':     { target_valence: 0.25, target_energy: 0.3, target_acousticness: 0.5, target_danceability: 0.4, target_instrumentalness: 0.3, target_tempo: 85 },
+  'Calm':    { target_valence: 0.5,  target_energy: 0.2, target_acousticness: 0.6, target_danceability: 0.4, target_instrumentalness: 0.4, target_tempo: 80 },
+  'Energetic': { target_valence: 0.7, target_energy: 0.75, target_acousticness: 0.3, target_danceability: 0.75, target_instrumentalness: 0.2, target_tempo: 120 },
+  'Focus':   { target_valence: 0.5, target_energy: 0.35, target_acousticness: 0.5, target_danceability: 0.45, target_instrumentalness: 0.75, target_tempo: 90 }
 };
 
 // Generate PKCE code verifier and challenge
@@ -509,6 +520,81 @@ function App() {
       date: new Date().toLocaleDateString()
     };
     setMoodHistory(prev => [moodEntry, ...prev]);
+  };
+
+  // Clamp a value to a range
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+  // Push target profile away from a disliked song so future picks are more on-mood
+  const pushProfileFromDislike = (mood, currentProfile, features) => {
+    const f = features || {};
+    const get = (key) => (currentProfile[key] != null ? currentProfile[key] : (BASELINE_TARGET_PROFILES[mood] && BASELINE_TARGET_PROFILES[mood][key]));
+    const v = (x) => clamp(x, 0, 1);
+    const t = (x) => clamp(x, 50, 200);
+
+    switch (mood) {
+      case 'Happy':
+        // Song was too sad → push energy, valence, danceability up
+        return {
+          target_valence: v(Math.max(get('target_valence') ?? 0.5, (f.valence ?? 0.5) + 0.15)),
+          target_energy: v(Math.max(get('target_energy') ?? 0.5, (f.energy ?? 0.5) + 0.15)),
+          target_acousticness: get('target_acousticness') ?? 0.5,
+          target_danceability: v(Math.max(get('target_danceability') ?? 0.5, (f.danceability ?? 0.5) + 0.1)),
+          target_instrumentalness: get('target_instrumentalness') ?? 0.3,
+          target_tempo: t(Math.max(get('target_tempo') ?? 110, (f.tempo ?? 100) + 10)),
+        };
+      case 'Sad':
+        // Song was too happy → push valence, energy, tempo down
+        return {
+          target_valence: v(Math.min(get('target_valence') ?? 0.3, (f.valence ?? 0.5) - 0.15)),
+          target_energy: v(Math.min(get('target_energy') ?? 0.4, (f.energy ?? 0.5) - 0.15)),
+          target_acousticness: get('target_acousticness') ?? 0.5,
+          target_danceability: v(Math.min(get('target_danceability') ?? 0.5, (f.danceability ?? 0.5) - 0.1)),
+          target_instrumentalness: get('target_instrumentalness') ?? 0.3,
+          target_tempo: t(Math.min(get('target_tempo') ?? 95, (f.tempo ?? 120) - 15)),
+        };
+      case 'Calm':
+        // Song was too energetic → push energy, valence, tempo, danceability down
+        return {
+          target_valence: v(Math.min(get('target_valence') ?? 0.5, (f.valence ?? 0.6) - 0.15)),
+          target_energy: v(Math.min(get('target_energy') ?? 0.25, (f.energy ?? 0.5) - 0.2)),
+          target_acousticness: v(Math.max(get('target_acousticness') ?? 0.5, (f.acousticness ?? 0.4) + 0.1)),
+          target_danceability: v(Math.min(get('target_danceability') ?? 0.5, (f.danceability ?? 0.6) - 0.15)),
+          target_instrumentalness: get('target_instrumentalness') ?? 0.4,
+          target_tempo: t(Math.min(get('target_tempo') ?? 90, (f.tempo ?? 120) - 15)),
+        };
+      case 'Energetic':
+        // Song wasn't energetic enough → push energy, valence, danceability, tempo up
+        return {
+          target_valence: v(Math.max(get('target_valence') ?? 0.6, (f.valence ?? 0.5) + 0.15)),
+          target_energy: v(Math.max(get('target_energy') ?? 0.7, (f.energy ?? 0.5) + 0.2)),
+          target_acousticness: v(Math.min(get('target_acousticness') ?? 0.4, (f.acousticness ?? 0.5) - 0.1)),
+          target_danceability: v(Math.max(get('target_danceability') ?? 0.7, (f.danceability ?? 0.5) + 0.15)),
+          target_instrumentalness: get('target_instrumentalness') ?? 0.2,
+          target_tempo: t(Math.max(get('target_tempo') ?? 118, (f.tempo ?? 100) + 15)),
+        };
+      case 'Focus':
+        // Song was too distracting → push energy down, instrumentalness up
+        return {
+          target_valence: get('target_valence') ?? 0.5,
+          target_energy: v(Math.min(get('target_energy') ?? 0.4, (f.energy ?? 0.5) - 0.15)),
+          target_acousticness: get('target_acousticness') ?? 0.5,
+          target_danceability: get('target_danceability') ?? 0.45,
+          target_instrumentalness: v(Math.max(get('target_instrumentalness') ?? 0.7, (f.instrumentalness ?? 0.5) + 0.2)),
+          target_tempo: get('target_tempo') ?? 90,
+        };
+      default:
+        return currentProfile || BASELINE_TARGET_PROFILES[mood];
+    }
+  };
+
+  // Update user vibe profile from a thumbs-down (so future picks move away from this song)
+  const updateProfileFromDislike = (mood, features) => {
+    setUserVibeProfiles(prev => {
+      const current = prev[mood] || BASELINE_TARGET_PROFILES[mood];
+      const newProfile = pushProfileFromDislike(mood, current, features);
+      return { ...prev, [mood]: newProfile };
+    });
   };
 
   // Update user vibe profile based on liked songs
@@ -962,7 +1048,11 @@ function App() {
         }
         
         // For default profiles, require at least 50% of conditions to pass
+        // Exception: Calm requires ALL conditions (no fast/loud/energetic tracks)
         if (!isUserLearnedProfile) {
+          if (mood === 'Calm') {
+            return passedConditions === totalConditions;
+          }
           return passedConditions >= Math.ceil(totalConditions / 2);
         }
         
@@ -1092,9 +1182,27 @@ function App() {
     }
   };
 
-  // Handle Dislike button
-  const handleDislike = () => {
+  // Handle Dislike button: block the track, train the profile away from this song, then suggest a new one
+  const handleDislike = async () => {
     if (!currentMood || !trackId) return;
+
+    const token = accessToken || sessionStorage.getItem('spotify_access_token');
+
+    // Fetch audio features so we can train the profile away from this song
+    if (token) {
+      try {
+        const response = await fetch(
+          `https://api.spotify.com/v1/audio-features/${trackId}`,
+          { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        if (response.ok) {
+          const features = await response.json();
+          updateProfileFromDislike(currentMood, features);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch features for dislike training:', err);
+      }
+    }
 
     // Add the trackId to the blocked list for the current mood
     setBlockedSongs(prev => {
@@ -1105,7 +1213,7 @@ function App() {
       return prev;
     });
 
-    // Immediately re-roll a new song
+    // Immediately re-roll a new song (now using the updated profile for this mood)
     getPersonalizedSongForMood(currentMood);
   };
 
