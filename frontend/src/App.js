@@ -24,11 +24,10 @@ const SpotifyCallback = () => {
       // Only redirect if we have an intended route and we're not already there
       if (intendedRoute && location.pathname !== intendedRoute) {
         sessionStorage.removeItem('spotify_intended_route');
-        // Preserve the code in the URL when redirecting
         navigate(`${intendedRoute}?code=${code}`, { replace: true });
+      } else if (!intendedRoute && location.pathname === '/api/auth/callback') {
+        navigate(`/?code=${code}`, { replace: true });
       } else if (!intendedRoute && location.pathname === '/') {
-        // If no intended route and we're on home, just clean up the URL
-        // The home page's useEffect will handle the code
         window.history.replaceState({}, document.title, window.location.pathname);
       }
       // If we're already on the intended route, let that page's useEffect handle the code
@@ -1211,6 +1210,7 @@ function App() {
         <div className="content">
           <Routes>
             <Route path="/" element={<Home spotifyPlayer={spotifyPlayer} moodHistory={moodHistory} />} />
+            <Route path="/api/auth/callback" element={<div style={{ padding: 20, color: 'white', textAlign: 'center' }}>Redirecting...</div>} />
             <Route path="/recommend" element={<ArtistRecommender />} />
             <Route path="/rolodex" element={<Rolodex />} />
             <Route path="/order" element={<WhatsMyOrder />} />
